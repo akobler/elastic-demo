@@ -1,0 +1,173 @@
+ 
+explore elastic
+********************
+GET /recapp_viewer/
+GET /recapp_viewer/_mapping
+POST /recapp_viewer/_search?pretty
+ 
+ 
+simple search
+********************
+GET /recapp_viewer/_search
+{
+    "query": {
+          "match": {"segmentTranscription": "amendement"}
+    }
+}
+ 
+GET /_search
+{ 
+    "query": {
+        "prefix" : { "segmentIndex" : "2016-09-" }
+    }
+}
+ 
+GET /recapp_viewer/_search
+{
+    "query": {
+        "filtered": {
+           "filter": {
+               "term": {
+                  "deputyId": 703
+               }
+           }
+        }
+    }
+}
+ 
+search with highlighing
+********************
+GET /recapp_viewer/_search
+{
+    "query": {
+          "match": {"segmentTranscription": "Lesung"}
+    },
+    "highlight": {
+        "fields": {
+            "objectTitle.de": {},
+            "objectTitle.fr": {}
+        }
+    }
+}
+ 
+ 
+ 
+ 
+ 
+aggregations
+********************
+POST /recapp_viewer/_search?pretty
+{
+    "size": 0,
+    "query": {
+        "match": { "sessionDate" : "2016-09-01"}
+    },
+    "aggs" : {
+        "top_speaker_durations" : {
+            "terms" : {
+                "field" : "deputyFullname",
+                "order" : { "durations_per_speaker" : "desc" },
+                "size" : 3
+            },
+            "aggs": {
+                "durations_per_speaker" : {
+                    "sum": { "field": "segmentDuration" }
+                }
+            }
+        }
+    }
+}
+ 
+ 
+ 
+ 
+ 
+debugging
+********************
+POST recapp_viewer/_analyze?field=segmentTranscription.tags
+{
+    "l'amendement cinquante cinq monsieur le conseiller haut-valais"       
+}
+ 
+ 
+ 
+alias
+*********************
+POST /_aliases
+{
+    "actions" : [
+        { "add" : { "index" : "recapp_viewer", "alias" : "recapp_viewer_prod" }}
+    ]
+}
+ 
+ 
+ 
+ 
+suggestions
+********************
+ 
+GET recapp_viewer/_suggest
+{
+    "correction" : {
+      "text" : "tourisus",
+      
+      "term" : {
+        "field" : "segmentTranscription.tags",
+        "min_doc_freq" : 2,
+        "prefix_length": 1,
+        "suggest_mode": "missing"
+      }
+    }
+}
+ 
+ 
+auto complete
+********************
+ 
+POST recapp_viewer/_search
+{
+  "size": 0,
+  "aggs": {
+    "autocomplete": {
+      "terms": {
+        "field": "segmentTranscription.tags",
+        "order": {
+          "_count": "desc"
+        },
+        "include": {
+          "pattern": "touris.*"
+        }
+      }
+    }
+  },
+  "query": {
+    "prefix": {
+      "segmentTranscription.tags": {
+        "value": "touris"
+      }
+    }
+  }
+}
+ 
+ 
+significant terms
+********************
+ 
+POST recapp_viewer/_search?pretty
+{
+  "size": 0,
+  "aggs": {
+    "tags": {
+      "significant_terms": {
+        "field": "segmentTranscription.tags"
+      }
+    }
+  },
+  "query": {
+   "match": { "sessionDate" : "2016-09-01"}
+  }
+}
+ 
+ 
+ 
+
